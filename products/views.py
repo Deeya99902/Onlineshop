@@ -1,139 +1,140 @@
-# from django.shortcuts import render,redirect,get_object_or_404
-# from .models import Product, Category,seller
-# from django.contrib.auth.decorators import login_required
-# from .forms import ProductForm
-# from django.contrib import messages
-# from django.db.models import Q
-# from django.
+from django.http import JsonResponse
+from django.shortcuts import render, redirect, get_object_or_404
+from .models import Product,Category, ProductLike
+from django.contrib.auth.decorators import login_required
+from .forms import ProductForm
+from django.contrib import messages
+from django.db.models import Q
+from django.core.paginator import Paginator
 
-# # Create your views here.
-# def home(request):
-#     products = Product.objects.filter(available=True).order_by('-created_at')[:8]
-#     categories = Category.objects.all()
-#     context = {
-#         'products': products,
-#         'categories': categories,
-#     }
-#     return render (request,'',context)
 
-# def product_list(request):
-#     query = request.GET.get('q')
-#     category_id = request.GET.get('category')
+
+# Create your views here.
+def home(request):
+    products = Product.objects.filter(avilable=True).order_by('-created_at')[:8]
+    categories = Category.objects.all()
+    context= {
+        'products':products,
+        'categories': categories,
+    }
+    return render(request, '',context)
+
+
+def product_list(request):
+    query = request.GET.get('q')
+    category_id = request.GET.get('category')
     
-#     products = Product.object.filter(available=True)
     
-#     if query:
-#         products = Product.filter(
-#             Q(name__icontains=query)|
-#             Q(description__icontains=query)|
-#             Q(seller_username__icontains=query)
+    products = Product.objects.filter(avilable=True)
+    
+    if query:
+        products = products.filter(
+            Q(name__icontain=query) |
+            Q(description__icontain=query) |
+            Q(seller__username__icontain=query)
             
-#         )
+        )
+    if category_id:
+        products= products.filter(category_id=category_id)
         
-        
-#     if category_id:
-#         products = products.filter(category_id=category_id)
-        
-        
-#         products = products.order_by('-created_at')
-        
-#         paginator = Paginator(products,12)
-#         page = request.GET.get('page')
-#         products = paginator.get_page(page_number)
-        
-        
-#         categories = Category.objects.all()
-        
-#         context = {
-#             'products': products,
-#             'categories': categories,
-#             'query': query,
-#             'select_category':int(category_id) if category_id else None,
-        
-#         }
-#         return render(request,'',context)
-        
-        
-
-
-# @login_required 
-# def create_product(request):
-#     if request.method == 'POST':
-#         form = ProductForm(request.POST, request.FILES)
-#         if form.is_valid():
-#             product = form.save(commit=False)
-#             product.seller = request.user
-#             product.save()
-#             messages.success(request,"Product added successfully")
-#             return redirect('')
-        
-#     else:
-#         form=ProductForm()
-#     return render()
+    products = products.order_by('-created_at')
+    
+    paginator = Paginator(products, 12)
+    page_number= request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
     
     
-# @login_required
-# def update_product(request,pk):
-#     product=get_object_or_404(Product,pk=pk,seller=request.user)
-#     if request.method == 'POST':
-#         form = ProductForm(request.POST, request.FILES, instance=product)
-#         if form.is_valid():
-#             form.save()
-#             messages.success(request,"Product updated successfully")
-#             return redirect()
+    categories = Category.objects.all()
+    
+    context = {
+        'page_obj':page_obj,
+        'categories':categories,
+        'query':query,
+        'selected_category':int(category_id) if category_id else None,
         
-#     else:
-#         form = ProductForm(instance=product)
-#     return render()
-
-# @login_required
-# def delete_product(request,pk):
-#     product=get_object_or_404(Product,pk=pk,seller=request.user)
+    }
+    return render(request,'' ,context)
     
-#     if seller != request.user:
-#         messages.error(request,"You cannot delete others product")
-#         return redirect('')
     
-#     if request.method == 'POST':
-#         product.delete()
-#         messages.success(request,"Product deleted successfully")
-#         return redirect('')
-#     return render()
+    
+    # 127.0.0.1/products/12
+    
 
 
-# @login_required
-# def toggle_like(request, pk):
-#     if request.method == 'POST':
-#         product = get_object_or_404(Product, pk=pk)
-#         like, created = ProductLike.objects.get_or_create(
-#             user= request.user, product=product
-#         )
-#         if not created:
-#             like.delete()
-#             liked = False
-#         else:
-#             liked = True
+
+
+
+
+
+
+
+
+@login_required
+def create_product(request):
+    if request.method == 'POST':
+        form = ProductForm(request.POST, request.FILES)
+        if form.is_valid():
+            product = form.save(commit=False)
+            product.seller = request.user
+            product.save()
+            messages.success(request,"Product added successfully")
+            return redirect('')
+    else:
+        form = ProductForm()
+    return render()
+
+
+
+@login_required  
+def update_product(request, pk):
+    product = get_object_or_404(Product, pk=pk, seller = request.user)
+    if request.method=='POST':
+        form = ProductForm(request.POST, request.FILES, instance=product)
+        if form.is_valid():
+            form.save()
+            messages.success(request,"Product updated successfully")
+            return redirect()
+    else:
+        form = ProductForm(instance=product)
+    return render()
+
+
+def delete_product(request, pk):
+    product= get_object_or_404(Product, pk=pk, seller=request.user)
+    if request.method == 'POST':
+        product.delete()
+        messages.success(request, 'delete bhayo')
+        return redirect()
+    return render()
+
+
+def toggle_like(request, pk):
+    if request.method == 'POST':
+        product = get_object_or_404(Product, pk=pk)
+        like, created = ProductLike.objects.get_or_create(
+            user= request.user, product=product
+        )
+        if not created:
+            like.delete()
+            liked = False
+        else:
+            liked = True
             
-#         total_like= ProductLike.objects.filter(product=product).count()
+        total_like= ProductLike.objects.filter(product=product).count()
         
-#         return JsonResponse({
-#             'liked' : liked,
-#             'total_like':total_like, 
-#         })
-#     return JsonResponse({'error':'Indivalid request'}, status=400)
+        return JsonResponse({
+            'liked' : liked,
+            'total_like':total_like, 
+        })
+    return JsonResponse({'error':'Indivalid request'}, status=400)
         
-# def my_product(request):
-#     if not request.user.is_authenticated:
-#         return redirect()
+def my_product(request):
+    if not request.user.is_authenticated:
+        return redirect()
     
-#     product = Product.objects.filter(seller =request.user).order_by('-created_at')
-#     paginator = Paginator(product, 10)  
-#     page_number = request.GET.get('page')
-#     page_obj = paginator.get_page(page_number)
+    product = Product.objects.filter(seller =request.user).order_by('-created_at')
+    paginator = Paginator(product, 10)  
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
     
-#     return render()
- 
-
-
-    
-    
+    return render()
